@@ -28,11 +28,12 @@ bietfieber$wave <- rbinom(nrow(bietfieber), 1, 0.5) +1
 df <- bietfieber
 wave <- "wave"
 kpi <- "awa_1"
-rang_vars  <- c("Altersklasse", "Geschlecht", "Taetigkeit")
+#rang_vars  <- c("Altersklasse", "Geschlecht", "Taetigkeit")
+rang_vars  <- c("Altersklasse", "Geschlecht")
 gew <- "gesamt"
 generalfilter <- T
-min_fallzahl <- 80
-sort_absolut <- T
+min_fallzahl <- 250
+#sort_absolut <- T
 
 #Function
 #Preprocessing
@@ -58,27 +59,43 @@ for (i in 1: length(ls_lvls)) {
 
 
 df_sel <- reduce(ls_lvls, crossing) # Erstelllen eines DataFrames mit allen Kombinationen
+df_sel$Fallzahl_w1 <- NA
+df_sel$Fallzahl_w2 <- NA
+df_sel$KPI_w1 <- NA
+df_sel$KPI_w2 <- NA
+df_sel$Delta_abs <- NA
+df_sel$Delta_prz <- NA
+
 
 get_filters <- function(v) {
   unique(unlist(strsplit(v, split = ",")))
 }
 
 
-
-
 for (r in 1: nrow(df_sel)) {
-  for (c in 1:ncol(df_sel)) {
+  print(r)
+  df.agg <- df
+  for (c in 1:length(rang_vars)) {
+    df.agg <- df.agg[ df[, rang_vars[ c]] %in% get_filters(df_sel[r,c]), ]
+  }  
+  
+  
+  df.agg <- df.agg %>%
+    group_by(.data[[wave]]) %>%
+    summarise(KPI = weighted.mean(.data[[kpi]], w= .data[[gew]],  na.rm = T)*100, 
+              Fallzahl = sum(.data[[gew]], na.rm = T))
+  
+  #Fallzahlpruefung
+  if (df.agg[1, 3] < min_fallzahl & df.agg[2, 3] < min_fallzahl) {next}
+  
+  df_sel[r, "Fallzahl_w1"] <- df.agg[1, 3]
+  df_sel[r, "Fallzahl_w2"] <- df.agg[2, 3]
+  df_sel[r, "KPI_w1"] <- df.agg[1, 2]
+  df_sel[r, "KPI_w2"] <- df.agg[2, 2]
+  df_sel[r, "Delta_abs"] <- df.agg[2, 2] - df.agg[1, 2]
+  df_sel[r, "Delta_prz"] <- (df.agg[2, 2] / df.agg[1, 2] -1) *100
     
-  }
 }
 
-df.agg <- df[ df[, names(df_sel[, 3])] %in% get_filters(df_sel[45,3]), ]
-#dplyr befehl
-df.agg <- df.agg %>%
-  group_by(.data[[wave]]) %>%
-  summarise(KPI = weighted.mean(.data[[kpi]], w= .data[[gew]],  na.rm = T)*100, 
-            Fallzahl = sum(.data[[gew]], na.rm = T),
-            Gesamt = 1)
 
-
-
+df_sel <- arrange(df_sel, desc(Delta_abs))
