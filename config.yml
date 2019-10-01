@@ -1,0 +1,6 @@
+default:
+  dbhost: 192.168.1.38 
+  dbport: 5432
+  dbname: "Daten"   
+  dbuser: "DataUser"   
+  dbpassword: "i74ADU18tJSgKO3X"
