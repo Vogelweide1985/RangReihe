@@ -5,7 +5,7 @@ get_filters <- function(v) {
 
 
 rangreihe <- function(df, wave, kpi, rang_vars, gew = NA, generalfilter=T, min_fallzahl = 80 ) {
-
+  
   #Preprocessing
   df <- as.data.frame(df)
   df <- df[generalfilter, ] # Filtern des Generalfilters
@@ -28,8 +28,9 @@ rangreihe <- function(df, wave, kpi, rang_vars, gew = NA, generalfilter=T, min_f
   
   
   df_sel <- reduce(ls_lvls, crossing) # Erstelllen eines DataFrames mit allen Kombinationen
-  df_sel$Fallzahl_w1 <- NA
-  df_sel$Fallzahl_w2 <- NA
+  print(df_sel)
+  df_sel$Fallzahl_ungew_w1 <- NA
+  df_sel$Fallzahl_ungew_w2 <- NA
   df_sel$KPI_w1 <- NA
   df_sel$KPI_w2 <- NA
   df_sel$Delta_abs <- NA
@@ -37,23 +38,24 @@ rangreihe <- function(df, wave, kpi, rang_vars, gew = NA, generalfilter=T, min_f
   
   
   for (r in 1: nrow(df_sel)) {
-    #print(r)
+    
     df.agg <- df
     for (c in 1:length(rang_vars)) {
-      df.agg <- df.agg[ df[, rang_vars[ c]] %in% get_filters(df_sel[r,c]), ]
+      df.agg <- df.agg[ df.agg[, rang_vars[ c]] %in% get_filters(df_sel[r,c]), ]
+      # print(paste(r, c, get_filters(df_sel[r,c]), sep = " : "))
     }  
     
     
     df.agg <- df.agg %>%
       group_by(.data[[wave]]) %>%
       summarise(KPI = weighted.mean(.data[[kpi]], w= .data[[gew]],  na.rm = T)*100, 
-                Fallzahl = sum(.data[[gew]], na.rm = T))
-    
+                Fallzahl = n())
+    #print(df.agg)
     #Fallzahlpruefung
     if (df.agg[1, 3] < min_fallzahl & df.agg[2, 3] < min_fallzahl) {next}
     
-    df_sel[r, "Fallzahl_w1"] <- round(df.agg[1, 3], 2)
-    df_sel[r, "Fallzahl_w2"] <- round(df.agg[2, 3], 2)
+    df_sel[r, "Fallzahl_ungew_w1"] <- df.agg[1, 3]
+    df_sel[r, "Fallzahl_ungew_w2"] <- df.agg[2, 3]
     df_sel[r, "KPI_w1"] <- round(df.agg[1, 2], 2)
     df_sel[r, "KPI_w2"] <- round(df.agg[2, 2], 2)
     df_sel[r, "Delta_abs"] <- round(df.agg[2, 2] - df.agg[1, 2], 2)
@@ -61,10 +63,10 @@ rangreihe <- function(df, wave, kpi, rang_vars, gew = NA, generalfilter=T, min_f
     
   }
   
-  df_sel <- df_sel[!is.na(df_sel$Fallzahl_w1), ]
+  df_sel <- df_sel[!is.na(df_sel$Delta_abs), ]
   
   #Äußerst unschöner Hack auf KOsten von extensiver Rechenzeit, da DUplikate nicht im Vorfeld gefiltert
-  df_sel <- df_sel[!duplicated(df_sel$Fallzahl_w1), ]
+  df_sel <- df_sel[!duplicated(df_sel$Delta_abs), ]
   df_sel <- arrange(df_sel, desc(Delta_abs))
   
 }
