@@ -28,8 +28,8 @@ bietfieber$wave <- rbinom(nrow(bietfieber), 1, 0.5) +1
 df <- bietfieber
 wave <- "wave"
 kpi <- "awa_1"
-#rang_vars  <- c("Altersklasse", "Geschlecht", "Taetigkeit")
-rang_vars  <- c("Altersklasse", "Geschlecht")
+rang_vars  <- c("Altersklasse", "Geschlecht", "Taetigkeit")
+#rang_vars  <- c("Altersklasse", "Geschlecht")
 gew <- "gesamt"
 generalfilter <- T
 min_fallzahl <- 250
@@ -45,10 +45,10 @@ df <- df[, c(kpi, wave, gew, rang_vars)] # Selektieren der relevanten Variablen
 
 df[, rang_vars] <- lapply(df[, rang_vars],  as.factor) # Faktorisierung
 ls_lvls <- lapply(df[, rang_vars], function(x) {
-  combinations(n=length(levels(x)), r=length(levels(x)),v = levels(x), repeats = T)
+  combinations(n=length(levels(x)), r=length(levels(x)),v = levels(x), repeats = T, set = T)
   }) # Ziehen aller Level-Kombinationen
 
-
+# Entfernen aller dopplungen
 
 #Zusammenfuegen aller Rows
 ls_lvls <- lapply(ls_lvls, as.data.frame) 
@@ -97,5 +97,8 @@ for (r in 1: nrow(df_sel)) {
     
 }
 
+df_sel <- df_sel[!is.na(df_sel$Fallzahl_w1), ]
 
+#Äußerst unschöner Hack auf KOsten von extensiver Rechenzeit, da DUplikate nicht im Vorfeld gefiltert
+df_sel <- df_sel[!duplicated(df_sel$Fallzahl_w1), ]
 df_sel <- arrange(df_sel, desc(Delta_abs))
