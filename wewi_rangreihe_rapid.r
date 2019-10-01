@@ -6,7 +6,7 @@ library(RPostgreSQL)
 library(tidyr)
 library(ZMGeR)
 library(gtools)
-source("wewi_helpers.r")
+library(purrr)
 
 # Einlesen der Config Datei mit den Zugangsdaten für den Rapid
 config <- config::get()
@@ -48,14 +48,37 @@ ls_lvls <- lapply(df[, rang_vars], function(x) {
   }) # Ziehen aller Level-Kombinationen
 
 
-df.agg <- df[ df[, names(ls_lvls[1])] %in% ls_lvls[[1]][1, ], ]
+
+#Zusammenfuegen aller Rows
+ls_lvls <- lapply(ls_lvls, as.data.frame) 
+for (i in 1: length(ls_lvls)) {
+  c <- names(ls_lvls[i])
+  ls_lvls[[i]] <- unite(ls_lvls[[i]], !!enquo(c), everything(),sep=",")
+}
+
+
+df_sel <- reduce(ls_lvls, crossing) # Erstelllen eines DataFrames mit allen Kombinationen
+
+get_filters <- function(v) {
+  unique(unlist(strsplit(v, split = ",")))
+}
+
+
+
+
+for (r in 1: nrow(df_sel)) {
+  for (c in 1:ncol(df_sel)) {
+    
+  }
+}
+
+df.agg <- df[ df[, names(df_sel[, 3])] %in% get_filters(df_sel[45,3]), ]
 #dplyr befehl
 df.agg <- df.agg %>%
   group_by(.data[[wave]]) %>%
   summarise(KPI = weighted.mean(.data[[kpi]], w= .data[[gew]],  na.rm = T)*100, 
             Fallzahl = sum(.data[[gew]], na.rm = T),
             Gesamt = 1)
-             
-test <- gather(df.agg,kpi, value, -wave)
-test <- spread(test, kpi, wave)
+
+
 
